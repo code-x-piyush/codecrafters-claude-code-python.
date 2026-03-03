@@ -9,11 +9,7 @@ API_KEY = os.getenv("OPENROUTER_API_KEY")
 BASE_URL = os.getenv("OPENROUTER_BASE_URL", default="https://openrouter.ai/api/v1")
 
 
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("-p", required=True)
-    args = p.parse_args()
-
+def call_llm(messages: list):
     if not API_KEY:
         raise RuntimeError("OPENROUTER_API_KEY is not set")
 
@@ -21,39 +17,65 @@ def main():
 
     chat = client.chat.completions.create(
         model="anthropic/claude-haiku-4.5",
-        messages=[{"role": "user", "content": args.p}],
+        messages=messages,
         tools=[
-            dict(
-                type="function",
-                function=dict(
-                    name="Read",
-                    description="Read and return the contents of a file",
-                    parameters=dict(
-                        type="object",
-                        properties=dict(
-                            file_path=dict(
-                                type="string",
-                                description="The path to the file to read",
-                            )
-                        ),
-                    ),
-                    required=["file_path"],
-                ),
-            )
+            {
+                "type": "function",
+                "function": {
+                    "name": "Read",
+                    "description": "Read and return the contents of a file",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "file_path": {
+                                "type": "string",
+                                "description": "The path to the file to read",
+                            }
+                        },
+                        "required": ["file_path"],
+                    },
+                },
+            }
         ],
     )
 
     if not chat.choices or len(chat.choices) == 0:
         raise RuntimeError("no choices in response")
 
-    if chat.choices[0].message.content:
-        print(chat.choices[0].message.content)
+    return chat.choices[0].message
 
-    for tc in chat.choices[0].message.tool_calls or []:
-        args = json.loads(tc.function.arguments)
-        if tc.function.name == "Read":
-            with open(args["file_path"]) as f:
-                print(f.read())
+
+def execute_tool_call(tool_call: dict):
+    tool_call_id = tool_call.id
+    name = tool_call.function.name
+    arguments = json.loads(tool_call.function.arguments)
+    if name == "Read":
+        with open(
+            file=arguments["file_path"], mode="r", encoding="utf-8"
+        ) as file_contents:
+            return {
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "content": file_contents.read(),
+            }
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("-p", required=True)
+    args = p.parse_args()
+
+    messages = [{"role": "user", "content": args.p}]
+
+    response = call_llm(messages)
+
+    while response.tool_calls:
+        messages.append(response)
+        for tool_call in response.tool_calls:
+            messages.append(execute_tool_call(tool_call))
+        response = call_llm(messages)
+
+    print(response.content)
 
 
 if __name__ == "__main__":
