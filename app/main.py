@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import sys
 
@@ -22,33 +23,37 @@ def main():
         model="anthropic/claude-haiku-4.5",
         messages=[{"role": "user", "content": args.p}],
         tools=[
-            {
-                "type": "function",
-                "function": {
-                    "name": "Read",
-                    "description": "Read and return the contents of a file",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "file_path": {
-                                "type": "string",
-                                "description": "The path to the file to read",
-                            }
-                        },
-                        "required": ["file_path"],
-                    },
-                },
-            }
+            dict(
+                type="function",
+                function=dict(
+                    name="Read",
+                    description="Read and return the contents of a file",
+                    parameters=dict(
+                        type="object",
+                        properties=dict(
+                            file_path=dict(
+                                type="string",
+                                description="The path to the file to read",
+                            )
+                        ),
+                    ),
+                    required=["file_path"],
+                ),
+            )
         ],
     )
 
     if not chat.choices or len(chat.choices) == 0:
         raise RuntimeError("no choices in response")
 
-    # You can use print statements as follows for debugging, they'll be visible when running tests.
-    # print("Logs from your program will appear here!", file=sys.stderr)
+    if chat.choices[0].message.content:
+        print(chat.choices[0].message.content)
 
-    print(chat.choices[0].message.content)
+    for tc in chat.choices[0].message.tool_calls or []:
+        args = json.loads(tc.function.arguments)
+        if tc.function.name == "Read":
+            with open(args["file_path"]) as f:
+                print(f.read())
 
 
 if __name__ == "__main__":
