@@ -3,6 +3,7 @@ import inspect
 import os
 import sys
 import json
+import subprocess
 from typing import Any, Callable, get_type_hints
 
 from openai import OpenAI
@@ -98,6 +99,17 @@ def Write(file_path: str, content: str) -> str:
         error_msg = f"Error writing to file: {e}"
         print(error_msg, file=sys.stderr)
         return error_msg
+
+
+@tool
+def Bash(command: str) -> str:
+    """Execute a shell command
+    :param command: The command to execute
+    """
+    result = subprocess.run(command.split(), capture_output=True, text=True)
+    if result.stderr:
+        return result.stderr
+    return result.stdout
 
 
 def execute_tool_call(tool_call) -> dict[str, Any]:
