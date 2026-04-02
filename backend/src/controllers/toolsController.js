@@ -5,6 +5,11 @@ const { PDFDocument } = require('pdf-lib');
 const DownloadHistory = require('../models/DownloadHistory');
 const ApiError = require('../utils/apiError');
 
+const uploadsDir = path.join(process.cwd(), 'uploads');
+const sanitizeFilename = (name) => path.basename(String(name || 'file')).replace(/[^a-zA-Z0-9._-]/g, '_');
+const ensureUploadPath = (filename) => path.join(uploadsDir, sanitizeFilename(filename));
+const normalizeFiles = (files) => (Array.isArray(files) ? files : []);
+
 const saveHistory = async (req, tool, filename) => {
   await DownloadHistory.create({
     user: req.user?._id || null,
@@ -16,11 +21,12 @@ const saveHistory = async (req, tool, filename) => {
 
 const mergePdf = async (req, res, next) => {
   try {
-    if (!req.files || req.files.length < 2) throw new ApiError(400, 'Upload at least 2 PDF files');
+    const files = normalizeFiles(req.files);
+    if (files.length < 2) throw new ApiError(400, 'Upload at least 2 PDF files');
     const mergedPdf = await PDFDocument.create();
 
     // eslint-disable-next-line no-restricted-syntax
-    for (const file of req.files) {
+    for (const file of files) {
       const pdfBytes = fs.readFileSync(file.path);
       const pdf = await PDFDocument.load(pdfBytes);
       const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
@@ -80,7 +86,7 @@ const wordToPdf = async (req, res, next) => {
 const removeBackground = async (req, res, next) => {
   try {
     if (!req.file) throw new ApiError(400, 'Upload one image file');
-    const output = path.join(process.cwd(), 'uploads', `bg-removed-${req.file.filename}.png`);
+    const output = ensureUploadPath(`bg-removed-${req.file.filename}.png`);
     await sharp(req.file.path).png().toFile(output);
     await saveHistory(req, 'remove-bg', path.basename(output));
     return res.download(output);
@@ -93,7 +99,7 @@ const changeBackgroundColor = async (req, res, next) => {
   try {
     if (!req.file) throw new ApiError(400, 'Upload one image file');
     const color = req.body.color || '#111827';
-    const output = path.join(process.cwd(), 'uploads', `bg-color-${req.file.filename}.png`);
+    const output = ensureUploadPath(`bg-color-${req.file.filename}.png`);
     const image = sharp(req.file.path);
     const meta = await image.metadata();
     const canvas = sharp({
@@ -115,7 +121,7 @@ const changeBackgroundColor = async (req, res, next) => {
 const optimizeImage = async (req, res, next) => {
   try {
     if (!req.file) throw new ApiError(400, 'Upload one image file');
-    const output = path.join(process.cwd(), 'uploads', `optimized-${req.file.filename}.jpg`);
+    const output = ensureUploadPath(`optimized-${req.file.filename}.jpg`);
     await sharp(req.file.path).jpeg({ quality: 75 }).toFile(output);
     await saveHistory(req, 'optimize-image', path.basename(output));
     return res.download(output);

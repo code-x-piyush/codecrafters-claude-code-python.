@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 
 type AIResponse = { success: boolean; data: { response: string } };
@@ -9,8 +9,6 @@ export default function AiToolSection() {
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const typed = useMemo(() => result, [result]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -42,7 +40,7 @@ export default function AiToolSection() {
         <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={4} placeholder="Ask anything..." className="w-full rounded-xl border border-white/20 bg-black/40 px-3 py-2 text-sm text-white" required />
         <button disabled={loading} className="rounded-xl bg-cyan-500 px-4 py-2 text-sm font-semibold text-black disabled:opacity-50">{loading ? 'Generating...' : 'Generate'}</button>
       </form>
-      <div className="mt-4 min-h-24 rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-zinc-200 whitespace-pre-wrap">{typed || 'Response will appear here...'}</div>
+      <div className="mt-4 min-h-24 rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-zinc-200 whitespace-pre-wrap">{result || 'Response will appear here...'}</div>
     </section>
   );
 }

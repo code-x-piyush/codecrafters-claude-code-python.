@@ -44,7 +44,7 @@ npm install --prefix backend
 Copy:
 
 ```bash
-cp /home/runner/work/codecrafters-claude-code-python./codecrafters-claude-code-python./backend/.env.example /home/runner/work/codecrafters-claude-code-python./codecrafters-claude-code-python./backend/.env
+cp backend/.env.example backend/.env
 ```
 
 Required variables (in `backend/.env`):
@@ -59,7 +59,7 @@ Required variables (in `backend/.env`):
 Copy:
 
 ```bash
-cp /home/runner/work/codecrafters-claude-code-python./codecrafters-claude-code-python./frontend/.env.example /home/runner/work/codecrafters-claude-code-python./codecrafters-claude-code-python./frontend/.env.local
+cp frontend/.env.example frontend/.env.local
 ```
 
 Set:
